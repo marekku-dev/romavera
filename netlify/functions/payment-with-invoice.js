@@ -56,10 +56,8 @@ exports.handler = async (event, context) => {
       };
     }
 
-    // Загружаем инвойс из Stripe
     const invoice = await stripe.invoices.retrieve(invoice_id);
 
-    // Загружаем продукты для каждой строки
     const invoiceItems = await Promise.all(
       invoice.lines.data
         .filter(line => line.pricing?.price_details?.product)
@@ -69,7 +67,7 @@ exports.handler = async (event, context) => {
             productId: product.id,
             name: product.name,
             description: product.description || '',
-            amount: line.amount, // уже в центах
+            amount: line.amount,
             currency: line.currency
           };
         })
@@ -77,7 +75,6 @@ exports.handler = async (event, context) => {
 
     console.log('Invoice items:', invoiceItems);
 
-    // Первый товар — базовый, остальные фильтруем по selected_upsells
     const baseItem = invoiceItems[0];
     const selectedItems = invoiceItems.slice(1).filter(item =>
       selected_upsells.includes(item.productId)
@@ -88,7 +85,7 @@ exports.handler = async (event, context) => {
         currency: item.currency,
         product_data: {
           name: item.name,
-          description: item.description
+          ...(item.description && { description: item.description })
         },
         unit_amount: item.amount
       },
