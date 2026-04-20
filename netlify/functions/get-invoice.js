@@ -21,7 +21,7 @@ exports.handler = async (event, context) => {
     console.log('Invoice retrieved:', invoice.id);
 
     const items = await Promise.all(
-      invoice.lines.data
+      invoice.lines.data.reverse()
         .filter(line => line.pricing?.price_details?.product)
         .map(async line => {
           const productId = line.pricing.price_details.product;
