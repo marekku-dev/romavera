@@ -68,17 +68,26 @@ exports.handler = async (event, context) => {
             name: product.name,
             description: product.description || '',
             amount: line.amount,
-            currency: line.currency
+            currency: line.currency,
+            isBase: line.metadata?.isBase === 'true'
           };
         })
     );
 
     console.log('Invoice items:', invoiceItems);
 
-    const baseItem = invoiceItems[0];
-    const selectedItems = invoiceItems.slice(1).filter(item =>
-      selected_upsells.includes(item.productId)
+    const baseItem = invoiceItems.find(item => item.isBase);
+    const selectedItems = invoiceItems.filter(item =>
+      !item.isBase && selected_upsells.includes(item.productId)
     );
+
+    if (!baseItem) {
+      return {
+        statusCode: 400,
+        headers: { 'Access-Control-Allow-Origin': '*', 'Content-Type': 'application/json' },
+        body: JSON.stringify({ error: 'No base item found in invoice. Make sure one line item has metadata isBase=true in Stripe.' })
+      };
+    }
 
     const lineItems = [baseItem, ...selectedItems].map(item => ({
       price_data: {
