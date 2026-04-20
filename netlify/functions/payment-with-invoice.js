@@ -75,9 +75,10 @@ exports.handler = async (event, context) => {
 
     console.log('Invoice items:', invoiceItems);
 
-    // Первый товар — базовый, остальные — апсейлы
-    const baseItem = invoiceItems[0];
-    const selectedItems = invoiceItems.slice(1).filter(item =>
+    // Stripe возвращает строки в обратном порядке — последний добавленный идёт первым
+    // Поэтому базовый товар (добавленный первым) — последний в массиве
+    const baseItem = invoiceItems[invoiceItems.length - 1];
+    const selectedItems = invoiceItems.slice(0, -1).filter(item =>
       selected_upsells.includes(item.productId)
     );
 
