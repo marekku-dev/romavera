@@ -8,7 +8,7 @@ exports.handler = async (event, context) => {
     return {
       statusCode: 400,
       headers: {
-        'Access-Control-Allow-Origin': 'https://www.romaverafilms.com',
+        'Access-Control-Allow-Origin': '*',
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({ error: 'Invoice ID required' })
@@ -47,7 +47,7 @@ exports.handler = async (event, context) => {
     return {
       statusCode: 200,
       headers: {
-        'Access-Control-Allow-Origin': 'https://www.romaverafilms.com',
+        'Access-Control-Allow-Origin': '*',
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
@@ -65,7 +65,7 @@ exports.handler = async (event, context) => {
     return {
       statusCode: error.statusCode || 500,
       headers: {
-        'Access-Control-Allow-Origin': 'https://www.romaverafilms.com',
+        'Access-Control-Allow-Origin': '*',
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({ error: error.message })
