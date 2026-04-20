@@ -19,19 +19,19 @@ exports.handler = async (event, context) => {
     const invoice = await stripe.invoices.retrieve(invoiceId);
 
     console.log('Invoice retrieved:', invoice.id);
-    console.log('Raw lines:', JSON.stringify(invoice.lines.data, null, 2));
 
     const items = await Promise.all(
       invoice.lines.data
-        .filter(line => line.price?.product)
+        .filter(line => line.pricing?.price_details?.product)
         .map(async line => {
-          const product = await stripe.products.retrieve(line.price.product);
+          const productId = line.pricing.price_details.product;
+          const product = await stripe.products.retrieve(productId);
           return {
             id: product.id,
             name: product.name || line.description || 'Unnamed item',
             description: product.description || '',
-            price: line.price.unit_amount / 100,
-            currency: line.price.currency,
+            price: line.amount / 100,
+            currency: line.currency,
             quantity: line.quantity,
             isBase: line.metadata?.isBase === 'true'
           };
@@ -39,8 +39,10 @@ exports.handler = async (event, context) => {
     );
 
     if (items.length === 0) {
-      console.warn('No valid items found in invoice. Raw lines logged above.');
+      console.warn('No valid items found in invoice.');
     }
+
+    console.log('Parsed items:', items);
 
     return {
       statusCode: 200,
