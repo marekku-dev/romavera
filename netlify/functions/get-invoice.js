@@ -1,23 +1,53 @@
-const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
+const Stripe = require('stripe');
+
+// Маппинг значений из Webflow CMS → ключ env-переменной
+const ACCOUNT_ALIASES = {
+  'SL (Europe)': 'SL_EUROPE',
+  'LLC (America)': 'LLC_AMERICA',
+};
+
+function getStripeClient(account) {
+  if (!account) {
+    throw new Error('account parameter is required');
+  }
+
+  const envKey = ACCOUNT_ALIASES[account] || account.toUpperCase().replace(/[^A-Z0-9]/g, '_');
+  const secretKey = process.env[`STRIPE_SK_${envKey}`];
+  const publicKey = process.env[`STRIPE_PK_${envKey}`];
+
+  if (!secretKey) {
+    throw new Error(`Unknown account: "${account}". Make sure STRIPE_SK_${envKey} is set in Netlify environment variables.`);
+  }
+
+  return { stripe: Stripe(secretKey), publicKey };
+}
 
 exports.handler = async (event, context) => {
   console.log('Getting invoice:', event.queryStringParameters);
+
   const invoiceId = event.queryStringParameters?.id;
+  const account = event.queryStringParameters?.account;
 
   if (!invoiceId) {
     return {
       statusCode: 400,
-      headers: {
-        'Access-Control-Allow-Origin': '*',
-        'Content-Type': 'application/json'
-      },
+      headers: { 'Access-Control-Allow-Origin': '*', 'Content-Type': 'application/json' },
       body: JSON.stringify({ error: 'Invoice ID required' })
     };
   }
 
-  try {
-    const invoice = await stripe.invoices.retrieve(invoiceId);
+  if (!account) {
+    return {
+      statusCode: 400,
+      headers: { 'Access-Control-Allow-Origin': '*', 'Content-Type': 'application/json' },
+      body: JSON.stringify({ error: 'account parameter required' })
+    };
+  }
 
+  try {
+    const { stripe, publicKey } = getStripeClient(account);
+
+    const invoice = await stripe.invoices.retrieve(invoiceId);
     console.log('Invoice retrieved:', invoice.id);
 
     const items = await Promise.all(
@@ -46,17 +76,15 @@ exports.handler = async (event, context) => {
 
     return {
       statusCode: 200,
-      headers: {
-        'Access-Control-Allow-Origin': '*',
-        'Content-Type': 'application/json'
-      },
+      headers: { 'Access-Control-Allow-Origin': '*', 'Content-Type': 'application/json' },
       body: JSON.stringify({
         invoiceId: invoice.id,
         customerEmail: invoice.customer_email,
         customerName: invoice.customer_name,
         description: invoice.description,
-        items: items,
-        totalAmount: invoice.total / 100
+        items,
+        totalAmount: invoice.total / 100,
+        stripePublicKey: publicKey
       })
     };
 
@@ -64,10 +92,7 @@ exports.handler = async (event, context) => {
     console.error('Error retrieving invoice:', error);
     return {
       statusCode: error.statusCode || 500,
-      headers: {
-        'Access-Control-Allow-Origin': '*',
-        'Content-Type': 'application/json'
-      },
+      headers: { 'Access-Control-Allow-Origin': '*', 'Content-Type': 'application/json' },
       body: JSON.stringify({ error: error.message })
     };
   }
