@@ -127,7 +127,7 @@ exports.handler = async (event, context) => {
 
     console.log('Line items for Stripe:', lineItems);
 
-    const baseUrl = process.env.URL || 'https://www.romaverafilms.com';
+    const baseUrl = process.env.SITE_URL || 'https://www.romaverafilms.com';
 
     const session = await stripe.checkout.sessions.create({
       payment_method_types: ['card'],
